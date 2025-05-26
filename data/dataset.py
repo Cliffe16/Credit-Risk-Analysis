@@ -1508,7 +1508,7 @@ def generate_repayments():
                         loans_to_update.append((status, repayment_date, days_late if days_late > 0 else -days_early, loan_id))
                         # --- 'success' tuple creation (6 elements) ---
                         # Uses total_repayable_float as the principal amount for reduction
-                        credit_updates.append(('success', customer_id, days_early, amount_paid, total_repayable_float, principal_loan_float, datetime.datetime.now()))
+                        credit_updates.append(('success', customer_id, days_early, amount_paid, principal_loan_float, datetime.datetime.now()))
                 else: # Defaulted
                     days_delayed = (datetime.datetime.now() - due_date).days
                     if days_delayed > 0:
