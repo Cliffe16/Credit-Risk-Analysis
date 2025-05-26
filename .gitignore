@@ -1,1 +1,7 @@
 venv/
+# Ignore large data files
+data/raw_loan_data.csv
+data/processed_loan_data.csv
+
+# Optional: to ignore any future CSVs in the data folder
+# data/*.csv
