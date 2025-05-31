@@ -17,7 +17,7 @@ def create_config_if_not_exists():
         
         # Database section
         config['database'] = {
-            'server': '192.168.100.30',
+            'server': 'localhost',
             'database': 'QuickPesaDB',
             'driver': 'ODBC Driver 18 for SQL Server',
             'trusted_connection': 'no',
@@ -1305,14 +1305,30 @@ def generate_loan_applications(start_date, end_date, apps_per_day):
 
                         # --- (Approval logic - Keep existing logic) ---
                         cursor.execute("SELECT CreditScore, ActiveLoans FROM CustomerCreditInfo WHERE CustomerID = ?", customer_id)
-                        credit_info = cursor.fetchone(); credit_score=500; active_loans=0 # Defaults
-                        if credit_info: credit_score, active_loans = (credit_info[0] or 500), (credit_info[1] or 0)
-                        approval_prob = 0.95
-                        if credit_score <= 400: approval_prob *= 0.7
-                        elif credit_score <= 500: approval_prob *= 0.85
-                        elif credit_score <= 600: approval_prob *= 0.95
-                        if active_loans > 0: approval_prob *= max(0.5, 1 - (active_loans * 0.05))
-                        approval_prob = max(0.1, min(0.95, approval_prob))
+                        credit_info = cursor.fetchone()
+                        credit_score = 500 # Default
+                        active_loans_count = 0 # Default
+                        if credit_info:
+                            credit_score = credit_info[0] if credit_info[0] is not None else 500
+                            active_loans_count = credit_info[1] if credit_info[1] is not None else 0
+
+                        approval_prob = 0.85  # Lowered base probability
+
+                        # Stricter credit score impact
+                        if credit_score <= 400: approval_prob *= 0.50 # Increased penalty
+                        elif credit_score <= 500: approval_prob *= 0.70 # Increased penalty
+                        elif credit_score <= 600: approval_prob *= 0.90 # Slight penalty or keep as is
+
+                        # Significantly increased penalty for active loans
+                        if active_loans_count == 1:
+                            approval_prob *= 0.6 # Reduced probability for 1 active loan
+                        elif active_loans_count == 2:
+                            approval_prob *= 0.25 # Sharply reduced for 2 active loans
+                        elif active_loans_count >= 3:
+                            approval_prob = 0.03 # Very low chance if 3 or more
+                        
+
+                        approval_prob = max(0.05, min(0.85, approval_prob)) 
                         status = 'Approved' if random.random() <= approval_prob else 'Rejected'
                         # ---
 
@@ -2405,6 +2421,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-    
-    
-    
