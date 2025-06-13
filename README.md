@@ -114,18 +114,18 @@ Based on the findings, here are several actionable recommendations for QuickPesa
 
 ## Project Structure
 The project repository is organized as follows:\
-├── config.ini                  # Configuration for database connection\
-├── data/                       # Holds raw and processed data\
-│   ├── dataset.py\
-│   └── raw_loan_data.csv\
-├── notebooks/                  # Jupyter notebooks for analysis\
-│   ├── 01_Data_Exploration_and_Preprocessing.ipynb\
-│   ├── 02_Exploratory_Data_Analysis.ipynb\
-│   └── 03_Findings_and_Recommendations.ipynb\
-├── sql_queries/                # SQL scripts\
-│   ├── Database Generation.sql\
-│   └── main_data_extraction.sql\
-└── README.md                   # This file\
+   ├── config.ini                  # Configuration for database connection\
+   ├── data/                       # Holds raw and processed data\
+   │   ├── dataset.py\
+   │   └── raw_loan_data.csv\
+   ├── notebooks/                  # Jupyter notebooks for analysis\
+   │   ├── 01_Data_Exploration_and_Preprocessing.ipynb\
+   │   ├── 02_Exploratory_Data_Analysis.ipynb\
+   │   └── 03_Findings_and_Recommendations.ipynb\
+   ├── sql_queries/                # SQL scripts\
+   │   ├── Database Generation.sql\
+   │   └── main_data_extraction.sql\
+   └── README.md                   # This file
 
 ## How to Run the Project
 1.  **Set up the Database**: Execute the `sql_queries/Database Generation.sql` script on your SQL Server to create the `QuickPesaDB` database and its tables.
