@@ -1,3 +1,4 @@
+#import necessary libraries
 import pyodbc
 import random
 import datetime
@@ -10,6 +11,7 @@ import os
 import decimal 
 from decimal import Decimal, ROUND_HALF_UP
 
+#Set up the application's settings and store in a config file
 def create_config_if_not_exists():
     if not os.path.exists('config.ini'):
         config = configparser.ConfigParser()
@@ -22,7 +24,7 @@ def create_config_if_not_exists():
             'driver': 'ODBC Driver 18 for SQL Server',
             'trusted_connection': 'no',
             'uid' : 'sa',
-            'pwd' : 'BLOOMberg411**',
+            'pwd' : '*********',
             'trust_server_certificate': 'yes' 
         }
         
@@ -68,7 +70,7 @@ def load_config(config_file ='config.ini'):
             db_settings['pwd'] = config.get('database', 'pwd', fallback=None)
 
         # Add trust_server_certificate, defaulting to False if not found for safety,
-        # but for your case, you need it to be True in the config file.
+        # but for this case, we need it to be True in the config file.
         db_settings['trust_server_certificate'] = config.getboolean('database', 'trust_server_certificate', fallback=False)
 
         return {
@@ -92,7 +94,7 @@ def load_config(config_file ='config.ini'):
         raise ValueError(f"Invalid config file structure or missing option: {str(e)}")
 
 
-# Initialize Faker and random seed
+# Initialize Faker and random seed for random data generation
 fake = Faker()
 random.seed(42)
 
@@ -126,11 +128,6 @@ def db_connection():
         # Add TrustServerCertificate if set to True in config
         if db_config.get('trust_server_certificate'):
             conn_str_parts.append("TrustServerCertificate=yes")
-        
-        # Some drivers/setups might also require Encrypt=yes for TrustServerCertificate=yes to work as expected
-        # or if the server enforces encryption. You can try adding this if TrustServerCertificate=yes alone doesn't resolve it.
-        # conn_str_parts.append("Encrypt=yes")
-
 
         conn_str = ";".join(conn_str_parts)
 
@@ -155,6 +152,7 @@ def db_connection():
     finally:
         if conn:
             conn.close()
+            
 # Progress Reporting
 def show_progress(current, total, start_time=None, prefix=""):
     """Enhanced progress reporting with prefix"""
@@ -174,7 +172,7 @@ def show_progress(current, total, start_time=None, prefix=""):
     if current >= total:
         print()  # New line when complete
         
-# Error Handling
+# Error Handling Classes
 class DataGenerationError(Exception):
     """Base exception for data generation errors"""
     pass
@@ -187,7 +185,7 @@ class GenerationError(DataGenerationError):
     """Data generation logic errors"""
     pass
 
-# Kenyan-specific data (unchanged from your original)
+# Kenyan-specific raw data for generation
 kenyan_counties = { 
     'Mombasa': {
         'weight': 12,
@@ -575,7 +573,7 @@ employment_by_age = {
     (46, 65): [('Self-Employed', 50), ('Business Owner', 30), ('Employed', 15), ('Unemployed', 5)]
 }
 
-# Helper functions (unchanged)
+# Helper functions 
 def weighted_choice(choices):
     total = sum(w for c, w in choices)
     r = random.uniform(0, total)
@@ -602,8 +600,9 @@ def random_time_on_date(date):
         seconds=random.randint(0, 59)
     )# Keep your original
 
+# Initial data insertion
 def initialize_database():
-    """Create tables and insert initial data"""
+    """Insert initial data"""
     with db_connection() as conn:
         cursor = conn.cursor()
         try:
@@ -630,6 +629,7 @@ def initialize_database():
             conn.rollback()
             raise DatabaseError(f"Database initialization failed: {str(e)}")
 
+#Customer records
 def generate_customers(count, batch_size=1000):
     print(f"Starting to generate {count} customers with batch size {batch_size}")  
     """Generate customers with batch processing"""
@@ -860,7 +860,7 @@ def generate_customers(count, batch_size=1000):
                     
                 credit_infos.append((
                     None,
-                    credit_score,                                       # 2
+                    credit_score,                                       
                     70 + random.randint(0, 30),                         # 3: PaymentHistoryScore
                     Decimal(str(round(random.uniform(0.05, 0.6), 2))),  # 4: CreditUtilization
                     0,                                                  # 5: CreditHistoryLength (starts at 0)
@@ -882,7 +882,6 @@ def generate_customers(count, batch_size=1000):
                     0,                                                  # 21: TimesOverdrafted
                     Decimal('0.00'),                                    # 22: TotalOverdraftFees
                     Decimal(str(round(max(500.0, 5000.0 * (credit_score / 700.0)), 2))), # 23: OverdraftLimit
-                    # --- New Tiering Fields ---
                     initial_loan_tier,                                  # 24: CurrentLoanTier
                     initial_max_eligible_amount,                        # 25: MaxEligibleLoanAmount (already Decimal)
                     initial_consecutive_repayments                      # 26: ConsecutiveOnTimeRepayments
@@ -932,6 +931,7 @@ def generate_customers(count, batch_size=1000):
             conn.rollback()
             raise GenerationError(f"Error generating customers: {str(e)}")
 
+#Device Profile
 def generate_device_info():
     with db_connection() as conn:
         cursor = conn.cursor()
@@ -973,6 +973,7 @@ def generate_device_info():
             conn.rollback()
             raise GenerationError(f"Error generating device info: {str(e)}")
 
+#Customer's mobile money transaction history
 def generate_mobile_money_transactions(customer_id, months_back=24, transaction_intensity=3):
     conn = None
     with db_connection() as conn:
@@ -1010,7 +1011,6 @@ def generate_mobile_money_transactions(customer_id, months_back=24, transaction_
             
             # Base transaction values
             base_daily = transaction_intensity
-            base_amount = monthly_volume / (100 * base_daily) if monthly_volume > 0 else 0
             
             # Track overdraft usage
             total_overdraft_fees = 0.0
@@ -1153,10 +1153,8 @@ def generate_mobile_money_transactions(customer_id, months_back=24, transaction_
             conn.rollback()
             raise
 
+#Core business logic of the lending application
 def generate_loan_applications(start_date, end_date, apps_per_day):
-    # Add this check to ensure reasonable volumes (optional, keep if you like)
-    # if apps_per_day > 3000000: ...
-
     with db_connection() as conn:
         cursor = conn.cursor()
         try:
@@ -1168,7 +1166,7 @@ def generate_loan_applications(start_date, end_date, apps_per_day):
             apps_generated = 0
             days_processed = 0
 
-            # --- (Keep initial checks for customers/products) ---
+            # Initial checks for customers and products
             cursor.execute("SELECT COUNT(*) FROM Customers")
             if cursor.fetchone()[0] == 0: raise ValueError("No customers found")
             cursor.execute("SELECT COUNT(*) FROM LoanProducts")
@@ -1178,7 +1176,6 @@ def generate_loan_applications(start_date, end_date, apps_per_day):
             cursor.execute("SELECT ProductID FROM LoanProducts")
             product_ids = [row[0] for row in cursor.fetchall()]
             if not customers or not product_ids: raise GenerationError("No customers or products found")
-            # ---
 
             current_date = start_date
             # <<<--- START Generation Loop ---<<<
@@ -1200,7 +1197,7 @@ def generate_loan_applications(start_date, end_date, apps_per_day):
                         cursor.execute("SELECT CASE WHEN EXISTS (SELECT 1 FROM LoanApplications la JOIN Loans l ON la.ApplicationID = l.ApplicationID WHERE la.CustomerID = ? AND la.Status = 'Approved') THEN 0 ELSE 1 END", customer_id)
                         is_first_time = cursor.fetchone()[0]
 
-                        # --- Fetch current loan eligibility and other credit info ---
+                        #Fetch current loan eligibility and other credit info ---
                         cursor.execute("""
                             SELECT CreditScore, ActiveLoans, CurrentLoanTier, MaxEligibleLoanAmount, ConsecutiveOnTimeRepayments 
                             FROM CustomerCreditInfo WHERE CustomerID = ?
@@ -1218,7 +1215,7 @@ def generate_loan_applications(start_date, end_date, apps_per_day):
                         max_eligible_loan_amount = float(max_eligible_loan_amount if max_eligible_loan_amount else 1000.00)
                         consecutive_on_time_repayments = consecutive_on_time_repayments if consecutive_on_time_repayments else 0
                         
-                        # --- Select a suitable loan product ---
+                        #Select a suitable loan product 
                         # For tier 0, you might still want to restrict to the "First Time Loan" or similar low-value products
                         if current_loan_tier == 0:
                             cursor.execute("""
@@ -1255,7 +1252,7 @@ def generate_loan_applications(start_date, end_date, apps_per_day):
                         min_amount_prod = float(min_amount_prod)
                         max_amount_prod = float(max_amount_prod)
 
-                        # --- (Get product details, calculate amount, term, purpose - Keep existing logic) ---
+                        # Get product details, calculate amount, term, purpose
                         cursor.execute("SELECT MinAmount, MaxAmount, MinTermDays, MaxTermDays, ProcessingFee, InterestRate FROM LoanProducts WHERE ProductID = ?", product_id)
                         product_details = cursor.fetchone()
                         if not product_details: continue
@@ -1274,7 +1271,7 @@ def generate_loan_applications(start_date, end_date, apps_per_day):
                         # Generate amount, ensuring it's between product's min and the effective_application_max_amount
                         amount = (min_amount_prod + math.sqrt(random.random()) * (effective_application_max_amount - min_amount_prod))
 
-                        # Loan amount/term adjustments by age/region/etc. (Keep existing logic but ensure 'amount' respects new cap)
+                        # Loan amount/term adjustments by age/region/etc. 
                         amount_multiplier = 1.0 # From existing code
                         if age < 25: amount_multiplier = 0.7
                         elif age >= 35: amount_multiplier = 1.2
@@ -1291,7 +1288,7 @@ def generate_loan_applications(start_date, end_date, apps_per_day):
                         term = min_term if current_loan_tier == 0 else min_term + random.randint(0, max(0, max_term - min_term))
                         term_multiplier = 1.0 
 
-                        # Purpose selection (Keep existing logic)
+                        # Purpose selection 
                         purpose = random.choice(loan_purposes) # Basic choice
                         if age < 25: purpose = weighted_choice([('School Fees', 50),('Business Capital', 20),('Holiday Spending', 15),('Other', 15)])
                         elif age < 35: purpose = weighted_choice([('Business Capital', 40),('Household Expenses', 25),('Rent', 20),('Other', 15)])
@@ -1303,7 +1300,7 @@ def generate_loan_applications(start_date, end_date, apps_per_day):
                         term = int(term * term_multiplier)
                         term = max(min_term, min(term, max_term))
 
-                        # --- (Approval logic - Keep existing logic) ---
+                        # Approval logic
                         cursor.execute("SELECT CreditScore, ActiveLoans FROM CustomerCreditInfo WHERE CustomerID = ?", customer_id)
                         credit_info = cursor.fetchone()
                         credit_score = 500 # Default
@@ -1330,15 +1327,13 @@ def generate_loan_applications(start_date, end_date, apps_per_day):
 
                         approval_prob = max(0.05, min(0.85, approval_prob)) 
                         status = 'Approved' if random.random() <= approval_prob else 'Rejected'
-                        # ---
 
-                        # --- (Set dates, reason, device, IP - Keep existing logic) ---
+                        # Set dates, reason, device, IP Addresses
                         app_time = current_date + datetime.timedelta(seconds=random.randint(0, 86399))
                         status_time = app_time + datetime.timedelta(minutes=random.randint(0, 120))
                         rejection_reason = None
                         if status == 'Rejected': rejection_reason = random.choice(['Insufficient Credit History', 'High Default Risk', 'Incomplete Information'])
                         device = random.choice(device_models); ip_address = f"197.156.{random.randint(0, 255)}.{random.randint(0, 255)}"
-                        # ---
 
                         # Insert application and get ID
                         cursor.execute(""" INSERT INTO LoanApplications (CustomerID, ProductID, ApplicationDate, AmountRequested, TermDays, Purpose, Status, StatusDate, RejectionReason, DeviceUsed, IPAddress) OUTPUT INSERTED.ApplicationID VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) """, (customer_id, product_id, app_time, float(amount), term, purpose, status, status_time, rejection_reason, device, ip_address))
@@ -1369,7 +1364,6 @@ def generate_loan_applications(start_date, end_date, apps_per_day):
                                     LastUpdated = ?
                                 WHERE CustomerID = ?
                             """, (principal_float, principal_float, datetime.datetime.now(), customer_id))
-                            # --- REMOVED 불필요한 커서 재할당, 커밋, 앱 취소 로직 ---
 
                         apps_generated += 1
 
@@ -1380,7 +1374,7 @@ def generate_loan_applications(start_date, end_date, apps_per_day):
                         conn.rollback() # Rollback the failed transaction for this app
                         continue # Continue to next application for the day
 
-                # --- Progress Reporting (moved outside inner loop) ---
+                # Progress Reporting 
                 days_processed += 1
                 if days_processed % 5 == 0 or current_date == end_date or days_processed == 1:
                     elapsed = (datetime.datetime.now() - start_time).total_seconds()
@@ -1401,11 +1395,10 @@ def generate_loan_applications(start_date, end_date, apps_per_day):
 
             print(f"\nFinished generating applications. Total generated: {apps_generated}")
 
-            # --- Application Cancellation (Moved Here) ---
+            # Application Cancellation 
             print("Cleaning up old pending applications...")
             cursor.execute(""" UPDATE LoanApplications SET Status = 'Cancelled' WHERE Status = 'Pending' AND ApplicationDate < DATEADD(day, -7, GETDATE()) """)
             print(f"Cancelled {cursor.rowcount} old pending applications.")
-            # ---
 
             # --- Final Commit ---
             print("Committing generated applications...")
@@ -1419,6 +1412,7 @@ def generate_loan_applications(start_date, end_date, apps_per_day):
             traceback.print_exc()
             raise GenerationError(f"Loan application generation failed: {str(e)}")                 
 
+#Decimal validation to remove errors that may occur during conversion
 def validate_decimal(value, max_digits=30, decimal_places=2):
     """Strict decimal validation with proper rounding and bounds checking"""
     try:
@@ -1442,13 +1436,14 @@ def validate_decimal(value, max_digits=30, decimal_places=2):
         return decimal_value
     except Exception as e:
         raise ValueError(f"Decimal validation failed: {str(e)}")
-            
+
+#Simulate hoe customers repay their loans            
 def generate_repayments():
     with db_connection() as conn:
         cursor = conn.cursor()
         try:
             config = load_config()
-            # --- (Keep data integrity check and initial loan fetching) ---
+            # Data integrity checks and initial loan fetching
             cursor.execute(""" SELECT COUNT(*) FROM Loans l LEFT JOIN LoanApplications la ON l.ApplicationID = la.ApplicationID WHERE la.ApplicationID IS NULL """)
             if cursor.fetchone()[0] > 0: raise GenerationError("Some loans are missing application data")
             cursor.execute(""" SELECT COUNT(*) FROM Loans l WHERE l.DueDate BETWEEN DATEADD(month, -12, GETDATE()) AND DATEADD(day, 30, GETDATE()) AND l.Status IN ('Active', 'Defaulted') """)
@@ -1477,7 +1472,7 @@ def generate_repayments():
                 monthly_income_float = float(monthly_income) if monthly_income else 0.0
                 principal_loan_float = float(principal_amount_loan) if principal_amount_loan else 0.0
 
-                repayment_prob = 0.85
+                repayment_prob = 0.85 #base repayment probability
                 current_credit_score = credit_score if credit_score else 500
                 current_times_defaulted = times_defaulted if times_defaulted else 0
                 if age < 25: repayment_prob *= 0.85; late_prob = 0.7
@@ -1498,7 +1493,7 @@ def generate_repayments():
                 repayment_prob = max(0.05, min(0.95, repayment_prob))
                 late_prob = max(0.1, min(0.9, late_prob))
 
-                # --- Repayment/Default Simulation ---
+                #Outcome Simulation(Paid, On-time, Partial, Late, Defaulted)
                 if random.random() <= repayment_prob: # Repaid
                     days_early = 0; days_paid_early = 0
                     if random.random() <= late_prob: # Late
@@ -1584,14 +1579,14 @@ def generate_repayments():
                 update_type = update[0]
                 try:
                     if update_type == 'success':
-                        # --- Check for length 6 ---
+                        # Check for length 6 
                         if len(update) != 6:
                             print(f"Skipping success update due to incorrect length: {len(update)}")
                             continue
-                        # --- Unpack 5 values after type ---
+                        # Unpack 5 values after type 
                         _, cust_id, days_early_val, amt_paid, principal_amt, ts = update
                         
-                        # (Keep the SQL logic, it uses the correct variables now)
+                        # Keep the SQL logic, it uses the correct variables now
                         cursor.execute("SELECT ActiveLoanAmount FROM CustomerCreditInfo WHERE CustomerID = ?", cust_id)
                         active_loan_amt_before_res = cursor.fetchone()
                         active_loan_amt_before = float(active_loan_amt_before_res[0]) if active_loan_amt_before_res and active_loan_amt_before_res[0] else 0.0
@@ -1624,7 +1619,6 @@ def generate_repayments():
                                 increase_factor = config['generation']['tier_amount_multiplier']
                                 increase_flat = config['generation']['tier_amount_increment']
                                 abs_max_loan_amount = config['generation']['absolute_max_loan_amount']
-
 
                                 if new_consecutive_repayments >= tier_upgrade_thresh and \
                                 current_tier_db < max_possible_tier :
@@ -1722,7 +1716,8 @@ def generate_repayments():
             print(f"\nError generating repayments: {str(e)}")
             traceback.print_exc()
             raise GenerationError(f"Error generating repayments: {str(e)}")
-   
+
+#Backfills repayment data
 def generate_historical_repayments(months_back=12):
     """Generate repayments for loans that were due in the past"""
     with db_connection() as conn:
@@ -1794,7 +1789,6 @@ def generate_historical_repayments(months_back=12):
                     total_repayable_float = float(total_repayable_loan if total_repayable_loan is not None else 0.0)
                     monthly_income_float = float(monthly_income_cust if monthly_income_cust is not None else 0.0)
 
-                    # --- REVISED Repayment Probability (to mirror generate_repayments) ---
                     base_repayment_prob = 0.85  # Base probability (as in generate_repayments)
                     base_late_prob = 0.3       # Base late probability (can be fine-tuned)
                     
@@ -1839,7 +1833,6 @@ def generate_historical_repayments(months_back=12):
                     # Clamp probabilities
                     repayment_prob = max(0.05, min(0.95, repayment_prob))
                     late_prob = max(0.1, min(0.9, late_prob))
-                    # --- END REVISED Repayment Probability ---
 
                     days_early_or_late_val = 0
                     simulated_repayment_date = due_date
@@ -1988,9 +1981,7 @@ def generate_historical_repayments(months_back=12):
                         if batch_customer_ids:
                             print(f"First few IDs in batch: {batch_customer_ids[:5]}")
                         raise # Re-raise the error to halt execution and indicate a persistent issue.
-            # Continue with customer_final_states logic...
-            # Continue with customer_final_states logic, which will now correctly handle an empty initial_cci_states if no customers were involved.
-
+            
             customer_final_states = {}
             temp_crb_updates_from_hist_aggregation = []
 
@@ -2013,7 +2004,6 @@ def generate_historical_repayments(months_back=12):
                 state = customer_final_states[cust_id]
                 event_date = event['event_date']
                 
-                # Ensure state['LastUpdated'] is a datetime object for comparison
                 # This logic should ideally ensure LastUpdated is always a datetime object when fetched or initialized
                 current_last_updated = state['LastUpdated']
                 if isinstance(current_last_updated, str):
@@ -2097,7 +2087,7 @@ def generate_historical_repayments(months_back=12):
             # Prepare batch update for CustomerCreditInfo
             final_cci_update_params = []
             for cust_id, state in customer_final_states.items():
-                # ... (formatting for final_cci_update_params, ensure all keys exist in state using .get()) ...
+                #Formatting for final_cci_update_params, ensure all keys exist in state using .get()) 
                 days_since_default_val = None
                 last_default_dt_state = state.get('LastDefaultDate')
                 last_updated_dt_state = state.get('LastUpdated')
@@ -2246,6 +2236,7 @@ def generate_credit_inquiries(months_back=12):
             conn.rollback()
             raise GenerationError(f"Error generating credit inquiries: {str(e)}")
 
+#Validate age distribution for accurate representation of the demographic's lending behaviour
 def validate_age_distribution():
     with db_connection() as conn:
         cursor = conn.cursor()
@@ -2273,6 +2264,7 @@ def validate_age_distribution():
         for row in cursor.fetchall():
             print(f"{row[0]}: {row[1]:.1f}%")
 
+#Main execution logic
 def main():
     """Main execution function with proper error handling"""
     try:
@@ -2408,7 +2400,6 @@ def main():
 
         # Validate
         validate_age_distribution()
-        # validate_decimal() # Commented out as it's not a validation function in the provided snippet
 
     except DataGenerationError as e:
         print(f"\nGeneration failed: {str(e)}")
