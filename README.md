@@ -76,7 +76,7 @@ The project repository is organized as follows:\
     * `03_Findings_and_Recommendations.ipynb`: To view the summary of findings and business recommendations.
 
 ## Limitations
-* The analysis is based purely on the historical data available in `QuickPesaDB`. It does not account for external macroeconomic factors.
+* The analysis is based purely on the synthetic data available in `QuickPesaDB`. It does not account for external macroeconomic factors.
 * A predictive machine learning model was not built; this analysis is diagnostic in nature.
 
 ## Future Work
